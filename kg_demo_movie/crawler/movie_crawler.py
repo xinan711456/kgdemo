@@ -18,12 +18,12 @@
 
 import requests
 import json
-from crawler.tradition2simple import traditional2simple
+from tradition2simple import traditional2simple
 import re
 import pymysql
 import time
 
-api_key = 'your_api_key'
+api_key = 'eb9c5f33700978885dc91206a8d03433'
 person_detail_url = 'https://api.themoviedb.org/3/person/{person_id}?api_key={api_key}&language=zh-cn'
 movie_cast_url = 'https://api.themoviedb.org/3/movie/{movie_id}/credits?api_key={api_key}'
 person_movie_detail_url = 'https://api.themoviedb.org/3/person/{person_id}/movie_credits?api_key={api_key}&language=zh-cn'
@@ -49,7 +49,8 @@ def get_all_genres():
     :return:
     """
     r = requests.get(all_movie_genres_url.format(api_key=api_key))
-    json_result = json.loads(r.content)
+    #json_result = json.loads(r.content)
+    json_result = json.loads(r.text)
     genres = json_result['genres']
     genre_list = list()
 
@@ -68,7 +69,9 @@ def get_movie_cast(movie_id):
     """
     cast_list = list()
     r = requests.get(movie_cast_url.format(movie_id=movie_id, api_key=api_key))
-    json_result = json.loads(r.content)
+    """json_result = json.loads(r.content)
+	"""
+    json_result = json.loads(r.text)
     movie_cast = json_result['cast']
 
     for cast in movie_cast:
@@ -188,53 +191,53 @@ if __name__ == '__main__':
     start_person_id = 57607
 
     person_detail = get_person_detail(start_person_id)
-
-    print '插入周星驰个人信息......'
+	# print( 'ok' )
+    # print ('插入周星驰个人信息......')
     mysql_cursor.execute(insert_person_command, person_detail)  # 插入周星驰的信息
-    print '插入成功......\n'
+    # print '插入成功......\n'
 
     movies_id, movies_detail, movies_genres = get_person_movie_credits(start_person_id)
 
     person_movie_id_pair = [(start_person_id, m) for m in movies_id]
 
-    print '插入周星驰出演的所有电影信息......'
+    # print '插入周星驰出演的所有电影信息......'
     mysql_cursor.executemany(insert_movie_command, movies_detail)   # 插入周星驰所有出演的电影信息
-    print '插入成功......\n'
+    # print '插入成功......\n'
 
-    print '插入周星驰与电影的id对......'
+    # print '插入周星驰与电影的id对......'
     mysql_cursor.executemany(insert_person_movie_command, person_movie_id_pair)  # 插入周星驰与电影的id对
-    print '插入成功......\n'
+    # print '插入成功......\n'
 
-    print '插入周星驰所有电影与类型的id对......'
+    # print '插入周星驰所有电影与类型的id对......'
     mg_pair = list()
     for mg in movies_genres:
         mg_pair.extend(mg)
     mysql_cursor.executemany(insert_movie_genre_command, mg_pair)  # 插入周星驰所有电影与类型的id对
-    print '插入成功......\n'
+    # print '插入成功......\n'
 
     crawled_person_id_set.add(start_person_id)  # 记录已存储周星驰的信息
 
     person_id_queue = set()
 
     # TODO 从周星驰出演的电影当中获取所有演员的ID
-    print '获取周星驰参演电影的所有其他演员ID........'
+    # print '获取周星驰参演电影的所有其他演员ID........'
     for m_id in movies_id:
         crawled_movie_id_set.add(m_id)  # 记录已存储周星驰所参演电影的信息
 
         for cast_id in get_movie_cast(m_id):
             person_id_queue.add(cast_id)
-    print '获取成功......\n'
+    # print '获取成功......\n'
 
     # TODO 获取这些演员的基本信息，存入person表中，并获取每个演员出演的所有电影基本信息
 
-    print '获取其他演员的基本信息及参演的所有电影的信息........'
+    # print '获取其他演员的基本信息及参演的所有电影的信息........'
     person_detail_list = list()
     person_movies_list = list()
     person_movie_pair_list = list()
-    print '共有{0}个演员的信息需要获取。'.format(len(person_id_queue)-1)
+    # print '共有{0}个演员的信息需要获取。'.format(len(person_id_queue)-1)
 
     for index, p_id in enumerate(person_id_queue):
-        print '获取第{0}个演员的基本信息和其参演的所有电影的信息。'.format(index+1)
+        # print '获取第{0}个演员的基本信息和其参演的所有电影的信息。'.format(index+1)
         if p_id not in crawled_person_id_set:
             person_detail_list.append(get_person_detail(p_id))
             movies_id, movies_detail, movies_genres = get_person_movie_credits(p_id)
@@ -242,7 +245,7 @@ if __name__ == '__main__':
             person_movie_pair_list.extend([(p_id, m) for m in movies_id])   # 添加当前演员与其出演电影的id对
             crawled_person_id_set.add(p_id)
 
-    print '获取成功......\n'
+    # print '获取成功......\n'
 
     mysql_cursor.executemany(insert_person_command, person_detail_list)
     mysql_cursor.executemany(insert_person_movie_command, set(person_movie_pair_list))
@@ -268,4 +271,4 @@ if __name__ == '__main__':
     mysql_cursor.close()
     mysql_db.close()
 
-    print '共花费时间{0}s'.format(time.time() - start_time)
+    # print '共花费时间{0}s'.format(time.time() - start_time)
